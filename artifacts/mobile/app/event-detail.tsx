@@ -8,10 +8,12 @@ import {
   Alert,
   KeyboardAvoidingView,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -101,7 +103,11 @@ export default function EventDetailScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { profile, docs, savedEvents, saveEvent, unsaveEvent } = useApp();
+  const {
+    profile, docs, savedEvents, saveEvent, unsaveEvent,
+    relevantCompanies, attendingEvents, attendedEvents, eventNotes,
+    setAttendingEvent, setAttendedEvent, setEventNote, addContact,
+  } = useApp();
 
   const [event, setEvent] = useState<NetworkingEvent | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -112,10 +118,30 @@ export default function EventDetailScreen() {
   const chatRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
+  // Prep brief state
+  const [prepBrief, setPrepBrief] = useState<string | null>(null);
+  const [isLoadingPrep, setIsLoadingPrep] = useState(false);
+  const [showPrepBrief, setShowPrepBrief] = useState(false);
+
+  // Post-event follow-up state
+  const [showFollowupModal, setShowFollowupModal] = useState(false);
+  const [followupContact, setFollowupContact] = useState({ name: '', company: '' });
+  const [followupType, setFollowupType] = useState<'linkedin' | 'email'>('linkedin');
+  const [followupDraft, setFollowupDraft] = useState<string | null>(null);
+  const [isLoadingFollowup, setIsLoadingFollowup] = useState(false);
+  const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
+
+  // Post-event note state
+  const [noteText, setNoteText] = useState('');
+  const [noteSaved, setNoteSaved] = useState(false);
+
   const topPad = Platform.OS === 'web' ? 16 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 24 : insets.bottom + 16;
 
   const isSaved = savedEvents.some(e => e.id === id);
+  const isAttending = id ? attendingEvents.includes(id) : false;
+  const hasAttended = id ? attendedEvents.includes(id) : false;
+  const savedNote = id ? (eventNotes[id] ?? '') : '';
 
   useEffect(() => {
     if (!id) return;
@@ -134,6 +160,10 @@ export default function EventDetailScreen() {
   }, [id]);
 
   useEffect(() => {
+    if (savedNote) setNoteText(savedNote);
+  }, [savedNote]);
+
+  useEffect(() => {
     if (!event) return;
     const intro: ChatMessage = {
       role: 'assistant',
@@ -144,6 +174,132 @@ export default function EventDetailScreen() {
 
   const isPast = event?.dateIso ? new Date(event.dateIso) < new Date() : false;
   const meta = TYPE_META[event?.eventType ?? ''] ?? { color: '#94a3b8', bg: 'rgba(148,163,184,0.14)', border: 'rgba(148,163,184,0.25)', label: 'Event' };
+
+  // Add to Google Calendar
+  const handleAddToCalendar = () => {
+    if (!event) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const title = encodeURIComponent(event.title);
+    const details = encodeURIComponent(`Organizer: ${event.organizer}${event.description ? '\n\n' + event.description : ''}`);
+    const location = encodeURIComponent(event.location);
+    let dates = '';
+    if (event.dateIso) {
+      const start = new Date(event.dateIso);
+      const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+      const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+      dates = `${fmt(start)}/${fmt(end)}`;
+    }
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}${dates ? `&dates=${dates}` : ''}`;
+    Linking.openURL(url);
+  };
+
+  const handleToggleAttending = async () => {
+    if (!id) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await setAttendingEvent(id, !isAttending);
+    if (!isAttending && event) {
+      saveEvent({
+        id: event.id, title: event.title, eventType: event.eventType,
+        organizer: event.organizer, dateLabel: event.dateLabel,
+        dateIso: event.dateIso, location: event.location,
+        description: event.description, url: event.url,
+        source: event.source, tags: event.tags, isOnline: event.isOnline,
+      });
+    }
+  };
+
+  const handleToggleAttended = async () => {
+    if (!id) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await setAttendedEvent(id, !hasAttended);
+  };
+
+  const handleSaveNote = async () => {
+    if (!id) return;
+    await setEventNote(id, noteText);
+    setNoteSaved(true);
+    setTimeout(() => setNoteSaved(false), 2000);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const handleGeneratePrepBrief = async () => {
+    if (!event || !profile || isLoadingPrep) return;
+    setIsLoadingPrep(true);
+    setShowPrepBrief(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const result = await aiService.eventPrepBrief({
+        event: {
+          title: event.title,
+          organizer: event.organizer,
+          dateLabel: event.dateLabel,
+          location: event.location,
+          description: event.description,
+          eventType: event.eventType,
+          tags: event.tags,
+        },
+        userProfile: {
+          displayName: profile.displayName !== 'You' ? profile.displayName : undefined,
+          currentDegree: profile.currentDegree,
+          careerGoals: profile.careerGoals,
+          skills: profile.skills,
+          institution: profile.institution,
+          preferredIndustries: profile.preferredIndustries,
+        },
+        relevantCompanies: relevantCompanies.slice(0, 8).map(c => ({ name: c.name, industry: c.industry })),
+      });
+      setPrepBrief(cleanAiResponse(result.brief || 'Could not generate brief.'));
+    } catch {
+      setPrepBrief('Could not generate prep brief — check your connection and try again.');
+    } finally {
+      setIsLoadingPrep(false);
+    }
+  };
+
+  const handleGenerateFollowup = async () => {
+    if (!followupContact.name.trim() || !event || !profile || isGeneratingFollowup) return;
+    setIsGeneratingFollowup(true);
+    try {
+      const result = await aiService.eventFollowupDraft({
+        event: {
+          title: event.title,
+          organizer: event.organizer,
+          dateLabel: event.dateLabel,
+          location: event.location,
+        },
+        contactName: followupContact.name.trim(),
+        contactCompany: followupContact.company.trim() || event.organizer,
+        userProfile: {
+          displayName: profile.displayName !== 'You' ? profile.displayName : undefined,
+          currentDegree: profile.currentDegree,
+          careerGoals: profile.careerGoals,
+        },
+        draftType: followupType,
+      });
+      setFollowupDraft(cleanAiResponse(result.draft || 'Could not generate draft.'));
+    } catch {
+      setFollowupDraft('Could not generate draft — check your connection and try again.');
+    } finally {
+      setIsGeneratingFollowup(false);
+    }
+  };
+
+  const handleSaveContactAndClose = async () => {
+    if (!followupContact.name.trim() || !event) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await addContact({
+      name: followupContact.name.trim(),
+      company: followupContact.company.trim() || event.organizer,
+      howWeMet: event.title,
+      notes: followupDraft ?? '',
+      isWarmLead: false,
+      needsFollowUp: true,
+    });
+    setShowFollowupModal(false);
+    setFollowupContact({ name: '', company: '' });
+    setFollowupDraft(null);
+    Alert.alert('Contact Added', `${followupContact.name} has been added to your contacts with a follow-up reminder.`);
+  };
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -259,6 +415,8 @@ export default function EventDetailScreen() {
     );
   }
 
+  const relevantToEvent = relevantCompanies.slice(0, 6);
+
   return (
     <KeyboardAvoidingView
       style={[s.screen, { paddingTop: topPad, paddingBottom: bottomPad }]}
@@ -338,6 +496,7 @@ export default function EventDetailScreen() {
           </ScrollView>
         )}
 
+        {/* ── Action buttons ── */}
         <View style={s.actionRow}>
           <Pressable
             style={[s.actionBtn, { flex: 1, borderColor: colors.border, backgroundColor: colors.card }]}
@@ -347,19 +506,152 @@ export default function EventDetailScreen() {
             }}
           >
             <Feather name="search" size={14} color={colors.textSecondary} />
-            <Text style={[s.actionBtnText, { color: colors.textSecondary }]}>Search Google</Text>
+            <Text style={[s.actionBtnText, { color: colors.textSecondary }]}>Search</Text>
           </Pressable>
+          {!isPast && (
+            <Pressable
+              style={[s.actionBtn, { flex: 1, borderColor: colors.border, backgroundColor: colors.card }]}
+              onPress={handleAddToCalendar}
+            >
+              <Feather name="calendar" size={14} color={colors.textSecondary} />
+              <Text style={[s.actionBtnText, { color: colors.textSecondary }]}>Add to Calendar</Text>
+            </Pressable>
+          )}
           {!!event.url && (
             <Pressable
               style={[s.actionBtn, { flex: 1, backgroundColor: meta.color }]}
               onPress={() => Linking.openURL(event.url!)}
             >
-              <Text style={[s.actionBtnText, { color: '#fff' }]}>Open Event</Text>
+              <Text style={[s.actionBtnText, { color: '#fff' }]}>Open</Text>
               <Feather name="external-link" size={14} color="#fff" />
             </Pressable>
           )}
         </View>
 
+        {/* ── Attendance toggles ── */}
+        <View style={s.attendanceCard}>
+          {!isPast ? (
+            <Pressable
+              style={[s.attendanceRow, isAttending && { backgroundColor: meta.bg }]}
+              onPress={handleToggleAttending}
+            >
+              <View style={[s.attendanceIcon, { backgroundColor: isAttending ? meta.bg : colors.muted, borderColor: isAttending ? meta.color : colors.border }]}>
+                <Feather name={isAttending ? 'check-circle' : 'calendar'} size={16} color={isAttending ? meta.color : colors.textMuted} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.attendanceLabel, isAttending && { color: meta.color }]}>
+                  {isAttending ? "I'm going to this event" : "Mark as attending"}
+                </Text>
+                <Text style={s.attendanceHint}>
+                  {isAttending ? "Saved · We'll help you prepare" : "Track events you plan to attend"}
+                </Text>
+              </View>
+              <Switch
+                value={isAttending}
+                onValueChange={handleToggleAttending}
+                trackColor={{ false: colors.muted, true: `${meta.color}70` }}
+                thumbColor={isAttending ? meta.color : '#888'}
+              />
+            </Pressable>
+          ) : (
+            <Pressable
+              style={[s.attendanceRow, hasAttended && { backgroundColor: 'rgba(34,197,94,0.08)' }]}
+              onPress={handleToggleAttended}
+            >
+              <View style={[s.attendanceIcon, { backgroundColor: hasAttended ? 'rgba(34,197,94,0.14)' : colors.muted, borderColor: hasAttended ? '#22c55e' : colors.border }]}>
+                <Feather name={hasAttended ? 'check-circle' : 'award'} size={16} color={hasAttended ? '#22c55e' : colors.textMuted} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.attendanceLabel, hasAttended && { color: '#22c55e' }]}>
+                  {hasAttended ? 'I attended this event' : 'Mark as attended'}
+                </Text>
+                <Text style={s.attendanceHint}>
+                  {hasAttended ? "Great! Log who you met below" : "Track events you attended"}
+                </Text>
+              </View>
+              <Switch
+                value={hasAttended}
+                onValueChange={handleToggleAttended}
+                trackColor={{ false: colors.muted, true: 'rgba(34,197,94,0.5)' }}
+                thumbColor={hasAttended ? '#22c55e' : '#888'}
+              />
+            </Pressable>
+          )}
+        </View>
+
+        {/* ── Prep brief (upcoming only) ── */}
+        {!isPast && profile?.currentDegree && (
+          <View style={s.prepCard}>
+            <View style={s.prepHeader}>
+              <View style={[s.prepIconBg, { backgroundColor: meta.bg, borderColor: meta.border }]}>
+                <Text style={{ fontSize: 14 }}>✦</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.prepTitle}>AI Prep Brief</Text>
+                <Text style={s.prepHint}>Personalised talking points, what to bring, and who to look for</Text>
+              </View>
+            </View>
+            {showPrepBrief ? (
+              isLoadingPrep ? (
+                <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={[s.prepHint, { marginTop: 8, textAlign: 'center' }]}>Tailoring your prep brief…</Text>
+                </View>
+              ) : prepBrief ? (
+                <Text style={s.prepText}>{prepBrief}</Text>
+              ) : null
+            ) : null}
+            {!showPrepBrief || isLoadingPrep ? (
+              <Pressable
+                style={[s.prepBtn, { backgroundColor: meta.color }]}
+                onPress={handleGeneratePrepBrief}
+                disabled={isLoadingPrep}
+              >
+                <Feather name="zap" size={13} color="#fff" />
+                <Text style={s.prepBtnText}>{isLoadingPrep ? 'Generating…' : 'Generate my prep brief'}</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={[s.prepBtn, { backgroundColor: colors.muted, borderColor: colors.border, borderWidth: 1 }]}
+                onPress={handleGeneratePrepBrief}
+              >
+                <Feather name="refresh-cw" size={13} color={colors.textMuted} />
+                <Text style={[s.prepBtnText, { color: colors.textMuted }]}>Regenerate</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {/* ── Who might be there (relevant companies) ── */}
+        {relevantToEvent.length > 0 && (
+          <View style={s.whoCard}>
+            <Text style={s.sectionLabel}>COMPANIES FROM YOUR CAREER LIST</Text>
+            <Text style={s.whoSubtitle}>These companies may attend, sponsor, or be represented at events like this</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingTop: 10 }}>
+              {relevantToEvent.map(company => (
+                <Pressable
+                  key={company.name}
+                  style={s.companyChip}
+                  onPress={() => {
+                    const q = encodeURIComponent(`${company.name} ${event.title}`);
+                    Linking.openURL(`https://www.google.com/search?q=${q}`);
+                  }}
+                >
+                  <View style={[s.companyAvatar, { backgroundColor: meta.bg }]}>
+                    <Text style={[s.companyAvatarText, { color: meta.color }]}>{company.name[0]?.toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.companyName} numberOfLines={1}>{company.name}</Text>
+                    {company.industry && <Text style={s.companyIndustry} numberOfLines={1}>{company.industry}</Text>}
+                  </View>
+                  <Feather name="external-link" size={11} color={colors.textMuted} />
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ── Reminder (upcoming only) ── */}
         {!isPast && event.dateIso && (
           <View style={s.reminderCard}>
             <View style={s.reminderHeader}>
@@ -394,6 +686,52 @@ export default function EventDetailScreen() {
           </View>
         )}
 
+        {/* ── Post-event section (past events) ── */}
+        {isPast && (
+          <View style={s.postEventCard}>
+            <Text style={s.sectionLabel}>POST-EVENT</Text>
+
+            {/* Note */}
+            <View style={{ marginTop: 10, marginBottom: 14 }}>
+              <Text style={s.fieldLabel}>Your notes</Text>
+              <TextInput
+                value={noteText}
+                onChangeText={setNoteText}
+                placeholder="What did you learn? Who did you talk to? What stood out?"
+                placeholderTextColor={colors.textMuted}
+                style={[s.noteInput, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+                multiline
+                onBlur={handleSaveNote}
+              />
+              <Pressable
+                style={[s.saveNoteBtn, { backgroundColor: noteSaved ? colors.successBg : colors.indigoBg, borderColor: noteSaved ? colors.successBorder : colors.indigoBorder }]}
+                onPress={handleSaveNote}
+              >
+                <Feather name={noteSaved ? 'check' : 'save'} size={13} color={noteSaved ? colors.success : colors.primary} />
+                <Text style={[s.saveNoteBtnText, { color: noteSaved ? colors.success : colors.primary }]}>
+                  {noteSaved ? 'Saved!' : 'Save note'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Add contact + follow-up */}
+            <Pressable
+              style={[s.followupBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => { setShowFollowupModal(true); setFollowupDraft(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+            >
+              <View style={[s.followupIcon, { backgroundColor: colors.indigoBg, borderColor: colors.indigoBorder }]}>
+                <Feather name="user-plus" size={14} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.followupLabel}>Log who you met</Text>
+                <Text style={s.followupHint}>Add a contact + AI-draft a follow-up message</Text>
+              </View>
+              <Feather name="chevron-right" size={15} color={colors.textMuted} />
+            </Pressable>
+          </View>
+        )}
+
+        {/* ── AI Chat ── */}
         <View style={s.aiSection}>
           <View style={s.aiHeader}>
             <View style={s.aiDotCircle}>
@@ -473,6 +811,91 @@ export default function EventDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* ── Follow-up contact modal ── */}
+      <Modal visible={showFollowupModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowFollowupModal(false)}>
+        <KeyboardAvoidingView style={[s.modal, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={s.modalHandle} />
+          <View style={s.modalHeader}>
+            <Pressable onPress={() => setShowFollowupModal(false)} style={s.modalBtn}>
+              <Text style={[s.modalBtnText, { color: colors.textMuted }]}>Cancel</Text>
+            </Pressable>
+            <Text style={s.modalTitle}>Who did you meet?</Text>
+            <Pressable
+              onPress={handleSaveContactAndClose}
+              style={[s.modalBtn, (!followupContact.name.trim()) && { opacity: 0.4 }]}
+              disabled={!followupContact.name.trim()}
+            >
+              <Text style={[s.modalBtnText, { color: colors.primary }]}>Save</Text>
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={s.modalBody} keyboardShouldPersistTaps="handled">
+            <Text style={s.fieldLabel}>Name *</Text>
+            <TextInput
+              value={followupContact.name}
+              onChangeText={v => setFollowupContact(f => ({ ...f, name: v }))}
+              placeholder="e.g. Chanda Mwale"
+              placeholderTextColor={colors.textMuted}
+              style={[s.field, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+              autoFocus
+            />
+            <Text style={s.fieldLabel}>Company / Organisation</Text>
+            <TextInput
+              value={followupContact.company}
+              onChangeText={v => setFollowupContact(f => ({ ...f, company: v }))}
+              placeholder={`e.g. ${event.organizer}`}
+              placeholderTextColor={colors.textMuted}
+              style={[s.field, { borderColor: colors.border, backgroundColor: colors.background, color: colors.text }]}
+            />
+
+            <Text style={[s.fieldLabel, { marginTop: 8 }]}>Draft follow-up message</Text>
+            <View style={s.draftTypeRow}>
+              {(['linkedin', 'email'] as const).map(t => (
+                <Pressable
+                  key={t}
+                  style={[s.draftTypeBtn, followupType === t && { backgroundColor: colors.indigoBg, borderColor: colors.primary }]}
+                  onPress={() => setFollowupType(t)}
+                >
+                  <Feather name={t === 'linkedin' ? 'link' : 'mail'} size={13} color={followupType === t ? colors.primary : colors.textMuted} />
+                  <Text style={[s.draftTypeBtnText, followupType === t && { color: colors.primary }]}>
+                    {t === 'linkedin' ? 'LinkedIn connect' : 'Follow-up email'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Pressable
+              style={[s.generateBtn, { backgroundColor: colors.primary }, (!followupContact.name.trim() || isGeneratingFollowup) && { opacity: 0.5 }]}
+              onPress={handleGenerateFollowup}
+              disabled={!followupContact.name.trim() || isGeneratingFollowup}
+            >
+              {isGeneratingFollowup
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Feather name="zap" size={13} color="#fff" />
+              }
+              <Text style={s.generateBtnText}>
+                {isGeneratingFollowup ? 'Drafting…' : followupDraft ? 'Regenerate' : 'Generate draft'}
+              </Text>
+            </Pressable>
+
+            {!!followupDraft && (
+              <View style={[s.draftOutput, { borderColor: colors.indigoBorder, backgroundColor: colors.indigoBg }]}>
+                <Text style={[s.draftText, { color: colors.text }]}>{followupDraft}</Text>
+                <Pressable
+                  style={s.copyBtn}
+                  onPress={() => {
+                    // Copy to clipboard via Linking workaround or just show alert
+                    Alert.alert('Copy this message', followupDraft ?? '');
+                  }}
+                >
+                  <Feather name="copy" size={12} color={colors.primary} />
+                  <Text style={[s.copyBtnText, { color: colors.primary }]}>Copy</Text>
+                </Pressable>
+              </View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -538,12 +961,74 @@ const styles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 5,
   },
   tagText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
-  actionRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  actionRow: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    borderWidth: 1, borderRadius: 12, paddingVertical: 13,
+    borderWidth: 1, borderRadius: 12, paddingVertical: 11, paddingHorizontal: 12,
   },
-  actionBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  actionBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+
+  // Attendance
+  attendanceCard: {
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 14, marginBottom: 16, overflow: 'hidden',
+  },
+  attendanceRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14,
+  },
+  attendanceIcon: {
+    width: 36, height: 36, borderRadius: 18,
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1,
+  },
+  attendanceLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.text },
+  attendanceHint: { fontSize: 12, fontFamily: 'Inter_400Regular', color: colors.textMuted, marginTop: 2 },
+
+  // Prep brief
+  prepCard: {
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 14, padding: 16, marginBottom: 16,
+  },
+  prepHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 14 },
+  prepIconBg: {
+    width: 36, height: 36, borderRadius: 10, borderWidth: 1,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  prepTitle: { fontSize: 14, fontFamily: 'Inter_700Bold', color: colors.text },
+  prepHint: { fontSize: 12, fontFamily: 'Inter_400Regular', color: colors.textMuted, marginTop: 2 },
+  prepText: {
+    fontSize: 14, fontFamily: 'Inter_400Regular', color: colors.text,
+    lineHeight: 22, marginBottom: 14, paddingTop: 4,
+  },
+  prepBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    borderRadius: 10, paddingVertical: 11,
+  },
+  prepBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#fff' },
+
+  // Who might be there
+  whoCard: {
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 14, padding: 16, marginBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 10, fontFamily: 'Inter_700Bold', color: colors.textMuted,
+    letterSpacing: 0.8, textTransform: 'uppercase',
+  },
+  whoSubtitle: { fontSize: 12, fontFamily: 'Inter_400Regular', color: colors.textMuted, marginTop: 4 },
+  companyChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 12, padding: 10, minWidth: 180,
+  },
+  companyAvatar: {
+    width: 30, height: 30, borderRadius: 8,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  companyAvatarText: { fontSize: 13, fontFamily: 'Inter_700Bold' },
+  companyName: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: colors.text },
+  companyIndustry: { fontSize: 11, fontFamily: 'Inter_400Regular', color: colors.textMuted, marginTop: 1 },
+
+  // Reminder
   reminderCard: {
     backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
     borderRadius: 14, padding: 16, marginBottom: 16,
@@ -557,32 +1042,62 @@ const styles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
   reminderSetText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   reminderOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   reminderChip: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 20, backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border,
   },
   reminderChipText: { fontSize: 12, fontFamily: 'Inter_500Medium', color: colors.textSecondary },
-  aiSection: {
-    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.indigoBorder,
-    borderRadius: 14, overflow: 'hidden', marginBottom: 16,
+
+  // Post-event
+  postEventCard: {
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 14, padding: 16, marginBottom: 16,
   },
-  aiHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    padding: 14, borderBottomWidth: 1, borderBottomColor: colors.indigoBorder,
-    backgroundColor: colors.indigoBg,
+  fieldLabel: {
+    fontSize: 11, fontFamily: 'Inter_700Bold', color: colors.textMuted,
+    letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8,
   },
-  aiDotCircle: {
-    width: 20, height: 20, borderRadius: 10, backgroundColor: colors.primary,
+  noteInput: {
+    borderWidth: 1, borderRadius: 10, padding: 12,
+    fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20,
+    minHeight: 100, textAlignVertical: 'top',
+  },
+  saveNoteBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-end', borderWidth: 1, borderRadius: 8,
+    paddingHorizontal: 14, paddingVertical: 7, marginTop: 8,
+  },
+  saveNoteBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  followupBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderWidth: 1, borderRadius: 12, padding: 14,
+  },
+  followupIcon: {
+    width: 36, height: 36, borderRadius: 10, borderWidth: 1,
     justifyContent: 'center', alignItems: 'center',
   },
-  aiTitle: { fontSize: 13, fontFamily: 'Inter_700Bold', color: colors.primary, letterSpacing: 0.3 },
-  chatArea: { maxHeight: 300 },
+  followupLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: colors.text },
+  followupHint: { fontSize: 12, fontFamily: 'Inter_400Regular', color: colors.textMuted, marginTop: 2 },
+
+  // AI section
+  aiSection: {
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 16, overflow: 'hidden', marginBottom: 16,
+  },
+  aiHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 },
+  aiDotCircle: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
+  },
+  aiTitle: { fontSize: 14, fontFamily: 'Inter_700Bold', color: colors.text },
+  chatArea: { height: 220 },
   bubble: {
-    borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10,
-    maxWidth: '86%',
+    maxWidth: '85%', borderRadius: 14, padding: 12,
+    borderWidth: 1,
   },
   bubbleText: { fontSize: 14, fontFamily: 'Inter_400Regular', color: colors.text, lineHeight: 20 },
   quickPrompt: {
-    borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 20, borderWidth: 1,
   },
   quickPromptText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
   inputRow: {
@@ -590,15 +1105,56 @@ const styles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
     padding: 12, borderTopWidth: 1,
   },
   inputField: {
-    flex: 1, borderWidth: 1, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 10,
-    fontSize: 14, fontFamily: 'Inter_400Regular',
-    maxHeight: 100,
+    flex: 1, borderWidth: 1, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 10,
+    fontSize: 14, fontFamily: 'Inter_400Regular', maxHeight: 100,
   },
   sendBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.primary,
-    justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
   },
   emptyText: { fontSize: 14, fontFamily: 'Inter_400Regular', color: colors.textMuted },
+
+  // Follow-up modal
+  modal: { flex: 1 },
+  modalHandle: {
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: colors.border, alignSelf: 'center', marginTop: 12, marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  modalTitle: { fontSize: 16, fontFamily: 'Inter_700Bold', color: colors.text },
+  modalBtn: { paddingHorizontal: 8, paddingVertical: 4 },
+  modalBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  modalBody: { padding: 20, gap: 4 },
+  field: {
+    borderWidth: 1, borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 11,
+    fontSize: 14, fontFamily: 'Inter_400Regular',
+    marginBottom: 16,
+  },
+  draftTypeRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  draftTypeBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingVertical: 10,
+    backgroundColor: colors.muted,
+  },
+  draftTypeBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: colors.textMuted },
+  generateBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    borderRadius: 10, paddingVertical: 12, marginBottom: 14,
+  },
+  generateBtnText: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#fff' },
+  draftOutput: {
+    borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 16,
+  },
+  draftText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 22, marginBottom: 10 },
+  copyBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-end',
+  },
+  copyBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
 });

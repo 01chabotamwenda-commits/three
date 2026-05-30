@@ -3,7 +3,8 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { aiService } from '@/lib/aiService';
 import { supabase } from '@/lib/supabase';
 import { fetchCloudData, pushCloudData } from '@/lib/cloudSync';
-import type { CompanySearchResult, RecentSearch, DiscoveredEvent } from '@/lib/cloudSync';
+import { searchLocalCompanies } from '@/lib/companiesDb';
+import type { CompanySearchResult, RecentSearch, DiscoveredEvent, RelevantCompany } from '@/lib/cloudSync';
 
 export type ApplicationStatus = 'Interested' | 'Applied' | 'Interviewing' | 'Offer' | 'Rejected' | 'Accepted';
 export type ThemeOverride = 'system' | 'light' | 'dark';
@@ -151,6 +152,10 @@ interface AppContextType {
   docs: StoredDocument[];
   savedLetters: SavedLetter[];
   interviewSessions: InterviewSession[];
+  relevantCompanies: RelevantCompany[];
+  attendingEvents: string[];
+  attendedEvents: string[];
+  eventNotes: Record<string, string>;
   isLoaded: boolean;
   isAuthenticated: boolean;
   themeOverride: ThemeOverride;
@@ -182,9 +187,14 @@ interface AppContextType {
   setRecentSearches: (r: RecentSearch[]) => Promise<void>;
   discoveredEvents: DiscoveredEvent[];
   setDiscoveredEvents: (e: DiscoveredEvent[]) => Promise<void>;
+  buildRelevantCompanies: () => Promise<void>;
+  setAttendingEvent: (eventId: string, attending: boolean) => Promise<void>;
+  setAttendedEvent: (eventId: string, attended: boolean) => Promise<void>;
+  setEventNote: (eventId: string, note: string) => Promise<void>;
   clearAllData: () => Promise<void>;
 }
 
+export { type RelevantCompany };
 export const AppContext = createContext<AppContextType | null>(null);
 
 const PROFILE_KEY = 'cc_profile';
@@ -198,6 +208,10 @@ const THEME_KEY = 'cc_theme';
 const SEARCH_RESULTS_KEY = 'cc_search_results';
 const RECENT_SEARCHES_KEY = 'cc_recent_searches';
 const DISCOVERED_EVENTS_KEY = 'cc_discovered_events';
+const RELEVANT_COMPANIES_KEY = 'cc_relevant_companies';
+const ATTENDING_EVENTS_KEY = 'cc_attending_events';
+const ATTENDED_EVENTS_KEY = 'cc_attended_events';
+const EVENT_NOTES_KEY = 'cc_event_notes';
 
 export function genId() {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -214,12 +228,17 @@ async function loadLocalData(
   setSearchResults: (r: CompanySearchResult[]) => void,
   setRecentSearches: (r: RecentSearch[]) => void,
   setDiscoveredEvents: (e: DiscoveredEvent[]) => void,
+  setRelevantCompanies: (c: RelevantCompany[]) => void,
+  setAttendingEvents: (ids: string[]) => void,
+  setAttendedEvents: (ids: string[]) => void,
+  setEventNotes: (n: Record<string, string>) => void,
   uid: string,
   displayName?: string,
 ) {
   const [
     rawProfile, rawApps, rawContacts, rawEvents, rawDocs, rawLetters, rawInterviews,
     rawSearchResults, rawRecentSearches, rawDiscoveredEvents,
+    rawRelevantCompanies, rawAttendingEvents, rawAttendedEvents, rawEventNotes,
   ] = await Promise.all([
     AsyncStorage.getItem(PROFILE_KEY),
     AsyncStorage.getItem(APPS_KEY),
@@ -231,6 +250,10 @@ async function loadLocalData(
     AsyncStorage.getItem(SEARCH_RESULTS_KEY),
     AsyncStorage.getItem(RECENT_SEARCHES_KEY),
     AsyncStorage.getItem(DISCOVERED_EVENTS_KEY),
+    AsyncStorage.getItem(RELEVANT_COMPANIES_KEY),
+    AsyncStorage.getItem(ATTENDING_EVENTS_KEY),
+    AsyncStorage.getItem(ATTENDED_EVENTS_KEY),
+    AsyncStorage.getItem(EVENT_NOTES_KEY),
   ]);
   let p: UserProfile = rawProfile
     ? JSON.parse(rawProfile)
@@ -246,6 +269,10 @@ async function loadLocalData(
   setSearchResults(rawSearchResults ? JSON.parse(rawSearchResults) : []);
   setRecentSearches(rawRecentSearches ? JSON.parse(rawRecentSearches) : []);
   setDiscoveredEvents(rawDiscoveredEvents ? JSON.parse(rawDiscoveredEvents) : []);
+  setRelevantCompanies(rawRelevantCompanies ? JSON.parse(rawRelevantCompanies) : []);
+  setAttendingEvents(rawAttendingEvents ? JSON.parse(rawAttendingEvents) : []);
+  setAttendedEvents(rawAttendedEvents ? JSON.parse(rawAttendedEvents) : []);
+  setEventNotes(rawEventNotes ? JSON.parse(rawEventNotes) : {});
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -259,6 +286,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [searchResults, setSearchResultsState] = useState<CompanySearchResult[]>([]);
   const [recentSearches, setRecentSearchesState] = useState<RecentSearch[]>([]);
   const [discoveredEvents, setDiscoveredEventsState] = useState<DiscoveredEvent[]>([]);
+  const [relevantCompanies, setRelevantCompaniesState] = useState<RelevantCompany[]>([]);
+  const [attendingEvents, setAttendingEventsState] = useState<string[]>([]);
+  const [attendedEvents, setAttendedEventsState] = useState<string[]>([]);
+  const [eventNotes, setEventNotesState] = useState<Record<string, string>>({});
   const [isLoaded, setIsLoaded] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [themeOverride, setThemeOverrideState] = useState<ThemeOverride>('dark');
@@ -280,22 +311,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         searchResults,
         recentSearches,
         discoveredEvents,
+        relevantCompanies,
+        attendingEvents,
+        attendedEvents,
+        eventNotes,
       });
     }, 2000);
     return () => {
       if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile, applications, contacts, savedEvents, docs, savedLetters, interviewSessions, searchResults, recentSearches, discoveredEvents, isAuthenticated]);
+  }, [profile, applications, contacts, savedEvents, docs, savedLetters, interviewSessions, searchResults, recentSearches, discoveredEvents, relevantCompanies, attendingEvents, attendedEvents, eventNotes, isAuthenticated]);
 
   // Helper: apply cloud data over local state and persist to AsyncStorage.
-  // Cloud is always authoritative — apply everything unconditionally so that
-  // deletions made on another device are honoured here too.
   const applyCloudData = useCallback(async (cloud: Awaited<ReturnType<typeof fetchCloudData>>) => {
     if (!cloud) return;
     if (cloud.profile) {
-      // Strip stale local-device file paths — they are unreachable on other devices.
-      // Only data: URIs (base64-embedded) and https: URLs are portable.
       const sanitisedProfile = { ...cloud.profile };
       const imgUri = sanitisedProfile.profileImageUri ?? '';
       if (imgUri.startsWith('file://') || imgUri.startsWith('/')) {
@@ -322,6 +353,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(cloud.recentSearches));
     setDiscoveredEventsState(cloud.discoveredEvents);
     await AsyncStorage.setItem(DISCOVERED_EVENTS_KEY, JSON.stringify(cloud.discoveredEvents));
+    setRelevantCompaniesState(cloud.relevantCompanies);
+    await AsyncStorage.setItem(RELEVANT_COMPANIES_KEY, JSON.stringify(cloud.relevantCompanies));
+    setAttendingEventsState(cloud.attendingEvents);
+    await AsyncStorage.setItem(ATTENDING_EVENTS_KEY, JSON.stringify(cloud.attendingEvents));
+    setAttendedEventsState(cloud.attendedEvents);
+    await AsyncStorage.setItem(ATTENDED_EVENTS_KEY, JSON.stringify(cloud.attendedEvents));
+    setEventNotesState(cloud.eventNotes);
+    await AsyncStorage.setItem(EVENT_NOTES_KEY, JSON.stringify(cloud.eventNotes));
   }, []);
 
   useEffect(() => {
@@ -339,10 +378,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setProfile, setApplications, setContacts, setSavedEvents, setDocs,
           setSavedLetters, setInterviewSessions,
           setSearchResultsState, setRecentSearchesState, setDiscoveredEventsState,
+          setRelevantCompaniesState, setAttendingEventsState, setAttendedEventsState, setEventNotesState,
           session.user.id, meta?.display_name,
         );
         setIsAuthenticated(true);
-        // Fetch cloud data in background and override local if cloud has more data
         fetchCloudData(session.user.id).then(applyCloudData).catch((err) => console.warn('Cloud sync failed:', err));
       }
       setIsLoaded(true);
@@ -355,10 +394,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setProfile, setApplications, setContacts, setSavedEvents, setDocs,
           setSavedLetters, setInterviewSessions,
           setSearchResultsState, setRecentSearchesState, setDiscoveredEventsState,
+          setRelevantCompaniesState, setAttendingEventsState, setAttendedEventsState, setEventNotesState,
           session.user.id, meta?.display_name,
         );
         setIsAuthenticated(true);
-        // Sync from cloud when signing in on a new device
         fetchCloudData(session.user.id).then(applyCloudData).catch((err) => console.warn('Cloud sync failed:', err));
       } else {
         setIsAuthenticated(false);
@@ -372,6 +411,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setSearchResultsState([]);
         setRecentSearchesState([]);
         setDiscoveredEventsState([]);
+        setRelevantCompaniesState([]);
+        setAttendingEventsState([]);
+        setAttendedEventsState([]);
+        setEventNotesState({});
       }
     });
 
@@ -397,27 +440,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return { success: true };
   }, []);
 
-    const signOut = useCallback(async () => {
-      try {
-        await supabase.auth.signOut();
-      } catch {
-        // ignore remote sign-out errors
-      } finally {
-        // Always clear local state immediately so the UI reflects signed-out state
-        setIsAuthenticated(false);
-        setProfile(null);
-        setApplications([]);
-        setContacts([]);
-        setSavedEvents([]);
-        setDocs([]);
-        setSavedLetters([]);
-        setInterviewSessions([]);
-      }
-    }, []);
-
-  const saveApps = useCallback(async (apps: Application[]) => {
-    setApplications(apps);
-    await AsyncStorage.setItem(APPS_KEY, JSON.stringify(apps));
+  const signOut = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore remote sign-out errors
+    } finally {
+      setIsAuthenticated(false);
+      setProfile(null);
+      setApplications([]);
+      setContacts([]);
+      setSavedEvents([]);
+      setDocs([]);
+      setSavedLetters([]);
+      setInterviewSessions([]);
+      setRelevantCompaniesState([]);
+      setAttendingEventsState([]);
+      setAttendedEventsState([]);
+      setEventNotesState({});
+    }
   }, []);
 
   const saveContacts = useCallback(async (ctcts: Contact[]) => {
@@ -426,10 +467,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const keywordGenLock = useRef(false);
+  const companyBuildLock = useRef(false);
+
+  const buildRelevantCompanies = useCallback(async () => {
+    const p = profile;
+    if (!p?.currentDegree || companyBuildLock.current) return;
+    companyBuildLock.current = true;
+    try {
+      const location = p.city || 'zambia';
+      const results = await searchLocalCompanies(
+        location,
+        p.preferredIndustries,
+        {
+          degree: p.currentDegree,
+          skills: p.skills,
+          goals: p.careerGoals,
+          professionKeywords: p.professionKeywords,
+        },
+        50,
+        'jobs',
+      );
+      // Take top 15 companies with meaningful scores
+      const top = results
+        .filter(r => r.fitScore >= 40)
+        .slice(0, 15)
+        .map(r => ({
+          name: r.name,
+          industry: r.industry,
+          sector: undefined as string | undefined,
+          fitScore: r.fitScore,
+          town: r.town,
+          website: r.website ?? null,
+          builtAt: Date.now(),
+        }));
+      setRelevantCompaniesState(top);
+      await AsyncStorage.setItem(RELEVANT_COMPANIES_KEY, JSON.stringify(top));
+    } catch {
+      // silently ignore — will retry next time
+    } finally {
+      companyBuildLock.current = false;
+    }
+  }, [profile]);
 
   const updateProfile = useCallback(async (p: UserProfile) => {
-    // Never persist a local-device file path — strip it so it can't pollute
-    // cloud sync.  Only data: URIs (base64) and https: URLs are portable.
     const imgUri = p.profileImageUri ?? '';
     const cleanProfile = (imgUri.startsWith('file://') || (imgUri.startsWith('/') && !imgUri.startsWith('//')))
       ? { ...p, profileImageUri: undefined }
@@ -456,6 +536,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } finally {
         keywordGenLock.current = false;
       }
+    }
+
+    // Rebuild relevant companies list when degree or industry changes
+    if (cleanProfile.currentDegree) {
+      setTimeout(() => {
+        // Run after state settles
+        companyBuildLock.current = false;
+        searchLocalCompanies(
+          cleanProfile.city || 'zambia',
+          cleanProfile.preferredIndustries,
+          {
+            degree: cleanProfile.currentDegree,
+            skills: cleanProfile.skills,
+            goals: cleanProfile.careerGoals,
+            professionKeywords: cleanProfile.professionKeywords,
+          },
+          50,
+          'jobs',
+        ).then(results => {
+          const top = results
+            .filter(r => r.fitScore >= 40)
+            .slice(0, 15)
+            .map(r => ({
+              name: r.name,
+              industry: r.industry,
+              sector: undefined as string | undefined,
+              fitScore: r.fitScore,
+              town: r.town,
+              website: r.website ?? null,
+              builtAt: Date.now(),
+            }));
+          setRelevantCompaniesState(top);
+          AsyncStorage.setItem(RELEVANT_COMPANIES_KEY, JSON.stringify(top)).catch(() => {});
+        }).catch(() => {});
+      }, 3000);
     }
   }, []);
 
@@ -526,6 +641,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSavedEvents(prev => {
       const next = prev.filter(e => e.id !== id);
       AsyncStorage.setItem(SAVED_EVENTS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const setAttendingEvent = useCallback(async (eventId: string, attending: boolean) => {
+    setAttendingEventsState(prev => {
+      const next = attending ? [...prev.filter(id => id !== eventId), eventId] : prev.filter(id => id !== eventId);
+      AsyncStorage.setItem(ATTENDING_EVENTS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const setAttendedEvent = useCallback(async (eventId: string, attended: boolean) => {
+    setAttendedEventsState(prev => {
+      const next = attended ? [...prev.filter(id => id !== eventId), eventId] : prev.filter(id => id !== eventId);
+      AsyncStorage.setItem(ATTENDED_EVENTS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const setEventNote = useCallback(async (eventId: string, note: string) => {
+    setEventNotesState(prev => {
+      const next = { ...prev, [eventId]: note };
+      AsyncStorage.setItem(EVENT_NOTES_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -634,6 +773,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.multiRemove([
       PROFILE_KEY, APPS_KEY, CONTACTS_KEY, SAVED_EVENTS_KEY, DOCS_KEY, LETTERS_KEY, INTERVIEWS_KEY,
       SEARCH_RESULTS_KEY, RECENT_SEARCHES_KEY, DISCOVERED_EVENTS_KEY,
+      RELEVANT_COMPANIES_KEY, ATTENDING_EVENTS_KEY, ATTENDED_EVENTS_KEY, EVENT_NOTES_KEY,
     ]);
     setProfile(null);
     setApplications([]);
@@ -645,11 +785,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSearchResultsState([]);
     setRecentSearchesState([]);
     setDiscoveredEventsState([]);
+    setRelevantCompaniesState([]);
+    setAttendingEventsState([]);
+    setAttendedEventsState([]);
+    setEventNotesState({});
   }, []);
 
   return (
     <AppContext.Provider value={{
       profile, applications, contacts, savedEvents, docs, savedLetters, interviewSessions,
+      relevantCompanies, attendingEvents, attendedEvents, eventNotes,
       searchResults, recentSearches, discoveredEvents,
       isLoaded,
       isAuthenticated,
@@ -663,6 +808,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addLetter, updateLetter, deleteLetter,
       addInterview, updateInterview, deleteInterview,
       setSearchResults, setRecentSearches, setDiscoveredEvents,
+      buildRelevantCompanies,
+      setAttendingEvent, setAttendedEvent, setEventNote,
       clearAllData,
     }}>
       {children}

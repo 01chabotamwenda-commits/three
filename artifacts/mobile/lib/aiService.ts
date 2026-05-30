@@ -259,4 +259,19 @@ export const aiService = {
       mergeReady?: boolean;
       finalFields?: Array<{ label: string; value: string }>;
     }>('profile-merge', payload),
+
+  eventPrepBrief: (payload: {
+    event: { title: string; organizer: string; dateLabel: string; location: string; description?: string; eventType: string; tags?: string[] };
+    userProfile: { displayName?: string; currentDegree: string; careerGoals: string; skills?: string; institution?: string; preferredIndustries?: string };
+    relevantCompanies?: Array<{ name: string; industry?: string }>;
+  }) => invokeAI<{ brief: string }>('event-prep-brief', payload as unknown as Record<string, unknown>, 30000),
+
+  eventFollowupDraft: (payload: {
+    event: { title: string; organizer: string; dateLabel: string; location: string };
+    contactName: string;
+    contactCompany: string;
+    userProfile: { displayName?: string; currentDegree: string; careerGoals: string };
+    draftType: 'linkedin' | 'email';
+    context?: string;
+  }) => invokeAI<{ draft: string }>('event-followup-draft', payload as unknown as Record<string, unknown>, 25000),
 };

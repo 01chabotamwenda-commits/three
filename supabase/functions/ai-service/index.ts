@@ -4065,6 +4065,10 @@ Deno.serve(async (req: Request) => {
         return await handleProfileMerge(body)
       case 'generate-profession-keywords':
         return await handleGenerateProfessionKeywords(body)
+      case 'event-prep-brief':
+        return await handleEventPrepBrief(body)
+      case 'event-followup-draft':
+        return await handleEventFollowupDraft(body)
 
       default:
         throw new ValidationError(`Unknown action: ${action}`)
@@ -4148,5 +4152,137 @@ Generate matching keywords and job titles.`
       keywords: [],
       jobTitles: [],
     }, 500)
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// EVENT PREP BRIEF — Personalised preparation guide for an event
+// ═════════════════════════════════════════════════════════════════
+
+async function handleEventPrepBrief(body: any): Promise<Response> {
+  const event = body.event ?? {}
+  const userProfile = body.userProfile ?? {}
+  const relevantCompanies: Array<{ name: string; industry?: string }> = body.relevantCompanies ?? []
+
+  const eventTitle = (event.title ?? '').toString().trim()
+  if (!eventTitle) return json({ error: 'Missing event.title' }, 400)
+
+  const companyList = relevantCompanies.length > 0
+    ? relevantCompanies.slice(0, 8).map(c => `- ${c.name}${c.industry ? ` (${c.industry})` : ''}`).join('\n')
+    : null
+
+  const systemPrompt = `You are a Zambian career advisor helping a student prepare for a professional networking event.
+
+Write a PERSONALISED, practical prep brief. Be specific, actionable, and encouraging.
+Avoid fluff. Speak directly to the student ("you", "your").
+
+Structure your response with these sections (use plain text, no markdown headers or bullets):
+1. Why this event matters for your career goals (2 sentences max)
+2. What to prepare before you go (3–4 specific actions)
+3. Who to target at this event (if company list is provided, mention those; otherwise suggest types)
+4. Smart questions to ask (3 specific questions)
+5. One quick follow-up action after the event
+
+Keep total length to 300–400 words. No bullet points. Write in flowing paragraphs.`
+
+  const userPrompt = `Student profile:
+- Degree: ${userProfile.currentDegree || 'Not specified'}
+- Career goals: ${userProfile.careerGoals || 'Not specified'}
+- Skills: ${userProfile.skills || 'Not specified'}
+- Institution: ${userProfile.institution || 'Not specified'}
+- Preferred industries: ${userProfile.preferredIndustries || 'Not specified'}
+${userProfile.displayName ? `- Name: ${userProfile.displayName}` : ''}
+
+Event:
+- Title: ${eventTitle}
+- Type: ${event.eventType || 'event'}
+- Organizer: ${event.organizer || 'Unknown'}
+- Date: ${event.dateLabel || 'TBC'}
+- Location: ${event.location || 'TBC'}
+- Description: ${event.description ? event.description.substring(0, 300) : 'Not provided'}
+- Tags: ${(event.tags ?? []).join(', ') || 'None'}
+
+${companyList ? `Companies from their career target list that may attend:\n${companyList}` : ''}
+
+Write their personalised prep brief now.`
+
+  try {
+    const result = await callGroq(systemPrompt, userPrompt)
+    return json({ brief: result.reply, model: result.model })
+  } catch (err: any) {
+    // Fallback to Gemini if Groq fails
+    try {
+      const result = await callGemini(systemPrompt, userPrompt)
+      return json({ brief: result.reply, model: result.model })
+    } catch (fallbackErr: any) {
+      logger.warn('event-prep-brief', `Failed: ${err?.message ?? err}`)
+      return json({ error: err?.message || 'AI service failed' }, 500)
+    }
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// EVENT FOLLOW-UP DRAFT — LinkedIn connection request or follow-up email
+// ═════════════════════════════════════════════════════════════════
+
+async function handleEventFollowupDraft(body: any): Promise<Response> {
+  const event = body.event ?? {}
+  const contactName = (body.contactName ?? '').toString().trim()
+  const contactCompany = (body.contactCompany ?? '').toString().trim()
+  const userProfile = body.userProfile ?? {}
+  const draftType: 'linkedin' | 'email' = body.draftType === 'email' ? 'email' : 'linkedin'
+  const context = (body.context ?? '').toString().trim()
+
+  if (!contactName) return json({ error: 'Missing contactName' }, 400)
+  if (!event.title) return json({ error: 'Missing event.title' }, 400)
+
+  const isLinkedin = draftType === 'linkedin'
+
+  const systemPrompt = isLinkedin
+    ? `You are a Zambian career advisor helping a student write a LinkedIn connection request after a networking event.
+
+The message must be:
+- Short: 250–300 characters MAX (LinkedIn limit)
+- Personal: reference the event and something specific
+- Professional but warm
+- End with a clear reason to connect
+- NO subject line, NO signature, NO greeting like "Dear" — just the connection note text
+- Written from the student's perspective`
+
+    : `You are a Zambian career advisor helping a student write a follow-up email after a networking event.
+
+The email must be:
+- Subject line on the first line (format: "Subject: ...")
+- 120–180 words total
+- Reference the event and something specific they discussed or the student's interest
+- Express genuine interest in learning more / staying in touch
+- Professional closing with the student's name
+- No generic phrases like "Hope this email finds you well"
+- Written from the student's perspective`
+
+  const userPrompt = `Student:
+- Name: ${userProfile.displayName || 'the student'}
+- Degree: ${userProfile.currentDegree || 'Not specified'}
+- Career goals: ${userProfile.careerGoals || 'Not specified'}
+
+They met: ${contactName}${contactCompany ? ` from ${contactCompany}` : ''}
+
+At event: "${event.title}" by ${event.organizer || 'the organizer'} (${event.dateLabel || 'recently'}, ${event.location || 'Zambia'})
+
+${context ? `Context / what they discussed: ${context}` : ''}
+
+Draft the ${isLinkedin ? 'LinkedIn connection note' : 'follow-up email'} now.`
+
+  try {
+    const result = await callGroq(systemPrompt, userPrompt)
+    return json({ draft: result.reply, model: result.model })
+  } catch (err: any) {
+    try {
+      const result = await callGemini(systemPrompt, userPrompt)
+      return json({ draft: result.reply, model: result.model })
+    } catch (fallbackErr: any) {
+      logger.warn('event-followup-draft', `Failed: ${err?.message ?? err}`)
+      return json({ error: err?.message || 'AI service failed' }, 500)
+    }
   }
 }

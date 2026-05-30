@@ -26,6 +26,16 @@ export interface CompanySearchResult {
   verified?: boolean;
 }
 
+export interface RelevantCompany {
+  name: string;
+  industry?: string;
+  sector?: string;
+  fitScore: number;
+  town?: string;
+  website?: string | null;
+  builtAt: number;
+}
+
 export interface RecentSearch {
   label: string;
   location: string;
@@ -67,13 +77,17 @@ export interface CloudData {
   searchResults: CompanySearchResult[];
   recentSearches: RecentSearch[];
   discoveredEvents: DiscoveredEvent[];
+  relevantCompanies: RelevantCompany[];
+  attendingEvents: string[];
+  attendedEvents: string[];
+  eventNotes: Record<string, string>;
 }
 
 export async function fetchCloudData(userId: string): Promise<CloudData | null> {
   try {
     const { data, error } = await supabase
       .from('cc_user_data')
-      .select('profile, applications, contacts, saved_events, documents, letters, interview_sessions, search_results, recent_searches, discovered_events')
+      .select('profile, applications, contacts, saved_events, documents, letters, interview_sessions, search_results, recent_searches, discovered_events, relevant_companies, attending_events, attended_events, event_notes')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -90,6 +104,10 @@ export async function fetchCloudData(userId: string): Promise<CloudData | null> 
       searchResults: (data.search_results as CompanySearchResult[]) ?? [],
       recentSearches: (data.recent_searches as RecentSearch[]) ?? [],
       discoveredEvents: (data.discovered_events as DiscoveredEvent[]) ?? [],
+      relevantCompanies: (data.relevant_companies as RelevantCompany[]) ?? [],
+      attendingEvents: (data.attending_events as string[]) ?? [],
+      attendedEvents: (data.attended_events as string[]) ?? [],
+      eventNotes: (data.event_notes as Record<string, string>) ?? {},
     };
   } catch {
     return null;
@@ -111,6 +129,10 @@ export async function pushCloudData(userId: string, data: CloudData): Promise<vo
         search_results: data.searchResults,
         recent_searches: data.recentSearches,
         discovered_events: data.discoveredEvents,
+        relevant_companies: data.relevantCompanies,
+        attending_events: data.attendingEvents,
+        attended_events: data.attendedEvents,
+        event_notes: data.eventNotes,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' }

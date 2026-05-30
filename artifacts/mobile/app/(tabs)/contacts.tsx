@@ -155,7 +155,7 @@ function getContactColor(name: string): string { return CONTACT_COLORS[name.char
 export default function NetworkScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { profile, contacts, savedEvents, saveEvent, unsaveEvent, addContact, updateContact, deleteContact, updateProfile, discoveredEvents: syncedDiscoveredEvents, setDiscoveredEvents: saveDiscoveredEvents } = useApp();
+  const { profile, contacts, savedEvents, saveEvent, unsaveEvent, addContact, updateContact, deleteContact, updateProfile, discoveredEvents: syncedDiscoveredEvents, setDiscoveredEvents: saveDiscoveredEvents, relevantCompanies, buildRelevantCompanies } = useApp();
   const router = useRouter();
 
   const [mainTab, setMainTab] = useState<MainTab>('events');
@@ -189,6 +189,14 @@ export default function NetworkScreen() {
     if (refreshing) setIsRefreshing(true); else setIsLoading(true);
     setFetchError(null); setShowResults(false);
     const now = Date.now();
+
+    // Build/refresh relevant companies list if stale (>24h) or empty
+    const hasCompanies = relevantCompanies && relevantCompanies.length > 0;
+    const isStale = !hasCompanies || (relevantCompanies[0]?.builtAt ?? 0) < now - 24 * 60 * 60 * 1000;
+    if (isStale && latestProfile.current?.currentDegree) {
+      buildRelevantCompanies().catch(() => {});
+    }
+
     setSearchSteps([
       { label: 'Detecting your location', status: 'active' },
       { label: 'Searching the web for events', status: 'pending' },
