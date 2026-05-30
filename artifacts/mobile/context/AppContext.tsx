@@ -206,6 +206,15 @@ const LETTERS_KEY = 'cc_letters';
 const INTERVIEWS_KEY = 'cc_interviews';
 const THEME_KEY = 'cc_theme';
 const SEARCH_RESULTS_KEY = 'cc_search_results';
+
+/** Never throws — quota / storage errors are silently swallowed so the app never crashes. */
+async function safeSetItem(key: string, value: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, value);
+  } catch {
+    // Quota exceeded or storage unavailable — data lives in React state, skip persistence
+  }
+}
 const RECENT_SEARCHES_KEY = 'cc_recent_searches';
 const DISCOVERED_EVENTS_KEY = 'cc_discovered_events';
 const RELEVANT_COMPANIES_KEY = 'cc_relevant_companies';
@@ -258,7 +267,7 @@ async function loadLocalData(
   let p: UserProfile = rawProfile
     ? JSON.parse(rawProfile)
     : { uid, displayName: displayName ?? 'You', currentDegree: '', careerGoals: '', weeklyGoal: 5 };
-  if (!rawProfile) await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+  if (!rawProfile) await safeSetItem(PROFILE_KEY, JSON.stringify(p));
   setProfile(p);
   setApplications(rawApps ? JSON.parse(rawApps) : []);
   setContacts(rawContacts ? JSON.parse(rawContacts) : []);
@@ -333,34 +342,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         delete sanitisedProfile.profileImageUri;
       }
       setProfile(sanitisedProfile);
-      await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(sanitisedProfile));
+      await safeSetItem(PROFILE_KEY, JSON.stringify(sanitisedProfile));
     }
     setApplications(cloud.applications);
-    await AsyncStorage.setItem(APPS_KEY, JSON.stringify(cloud.applications));
+    await safeSetItem(APPS_KEY, JSON.stringify(cloud.applications));
     setContacts(cloud.contacts);
-    await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(cloud.contacts));
+    await safeSetItem(CONTACTS_KEY, JSON.stringify(cloud.contacts));
     setSavedEvents(cloud.savedEvents);
-    await AsyncStorage.setItem(SAVED_EVENTS_KEY, JSON.stringify(cloud.savedEvents));
+    await safeSetItem(SAVED_EVENTS_KEY, JSON.stringify(cloud.savedEvents));
     setDocs(cloud.documents);
-    await AsyncStorage.setItem(DOCS_KEY, JSON.stringify(cloud.documents));
+    await safeSetItem(DOCS_KEY, JSON.stringify(cloud.documents));
     setSavedLetters(cloud.letters);
-    await AsyncStorage.setItem(LETTERS_KEY, JSON.stringify(cloud.letters));
+    await safeSetItem(LETTERS_KEY, JSON.stringify(cloud.letters));
     setInterviewSessions(cloud.interviewSessions);
-    await AsyncStorage.setItem(INTERVIEWS_KEY, JSON.stringify(cloud.interviewSessions));
+    await safeSetItem(INTERVIEWS_KEY, JSON.stringify(cloud.interviewSessions));
     setSearchResultsState(cloud.searchResults);
-    await AsyncStorage.setItem(SEARCH_RESULTS_KEY, JSON.stringify(cloud.searchResults));
+    await safeSetItem(SEARCH_RESULTS_KEY, JSON.stringify(cloud.searchResults));
     setRecentSearchesState(cloud.recentSearches);
-    await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(cloud.recentSearches));
+    await safeSetItem(RECENT_SEARCHES_KEY, JSON.stringify(cloud.recentSearches));
     setDiscoveredEventsState(cloud.discoveredEvents);
-    await AsyncStorage.setItem(DISCOVERED_EVENTS_KEY, JSON.stringify(cloud.discoveredEvents));
+    await safeSetItem(DISCOVERED_EVENTS_KEY, JSON.stringify(cloud.discoveredEvents));
     setRelevantCompaniesState(cloud.relevantCompanies);
-    await AsyncStorage.setItem(RELEVANT_COMPANIES_KEY, JSON.stringify(cloud.relevantCompanies));
+    await safeSetItem(RELEVANT_COMPANIES_KEY, JSON.stringify(cloud.relevantCompanies));
     setAttendingEventsState(cloud.attendingEvents);
-    await AsyncStorage.setItem(ATTENDING_EVENTS_KEY, JSON.stringify(cloud.attendingEvents));
+    await safeSetItem(ATTENDING_EVENTS_KEY, JSON.stringify(cloud.attendingEvents));
     setAttendedEventsState(cloud.attendedEvents);
-    await AsyncStorage.setItem(ATTENDED_EVENTS_KEY, JSON.stringify(cloud.attendedEvents));
+    await safeSetItem(ATTENDED_EVENTS_KEY, JSON.stringify(cloud.attendedEvents));
     setEventNotesState(cloud.eventNotes);
-    await AsyncStorage.setItem(EVENT_NOTES_KEY, JSON.stringify(cloud.eventNotes));
+    await safeSetItem(EVENT_NOTES_KEY, JSON.stringify(cloud.eventNotes));
   }, []);
 
   useEffect(() => {
@@ -463,7 +472,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const saveContacts = useCallback(async (ctcts: Contact[]) => {
     setContacts(ctcts);
-    await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(ctcts));
+    await safeSetItem(CONTACTS_KEY, JSON.stringify(ctcts));
   }, []);
 
   const keywordGenLock = useRef(false);
@@ -501,7 +510,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           builtAt: Date.now(),
         }));
       setRelevantCompaniesState(top);
-      await AsyncStorage.setItem(RELEVANT_COMPANIES_KEY, JSON.stringify(top));
+      await safeSetItem(RELEVANT_COMPANIES_KEY, JSON.stringify(top));
     } catch {
       // silently ignore — will retry next time
     } finally {
@@ -515,7 +524,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ? { ...p, profileImageUri: undefined }
       : p;
     setProfile(cleanProfile);
-    await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(cleanProfile));
+    await safeSetItem(PROFILE_KEY, JSON.stringify(cleanProfile));
 
     // Auto-generate AI profession keywords when degree changes and we don't have any
     if (cleanProfile.currentDegree && !cleanProfile.professionKeywords && !keywordGenLock.current) {
@@ -529,7 +538,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (result.keywords && result.keywords.length > 0) {
           const updated = { ...cleanProfile, professionKeywords: result.keywords };
           setProfile(updated);
-          await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(updated));
+          await safeSetItem(PROFILE_KEY, JSON.stringify(updated));
         }
       } catch {
         // silently ignore AI failures — keywords will be generated on next save
@@ -568,7 +577,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               builtAt: Date.now(),
             }));
           setRelevantCompaniesState(top);
-          AsyncStorage.setItem(RELEVANT_COMPANIES_KEY, JSON.stringify(top)).catch(() => {});
+          safeSetItem(RELEVANT_COMPANIES_KEY, JSON.stringify(top)).catch(() => {});
         }).catch(() => {});
       }, 3000);
     }
@@ -579,7 +588,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const app: Application = { ...data, id: genId(), lastModified: now, createdDate: now };
     setApplications(prev => {
       const next = [app, ...prev];
-      AsyncStorage.setItem(APPS_KEY, JSON.stringify(next));
+      safeSetItem(APPS_KEY, JSON.stringify(next));
       return next;
     });
     return app;
@@ -588,7 +597,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateApplication = useCallback(async (id: string, updates: Partial<Application>) => {
     setApplications(prev => {
       const next = prev.map(a => a.id === id ? { ...a, ...updates, lastModified: new Date().toISOString() } : a);
-      AsyncStorage.setItem(APPS_KEY, JSON.stringify(next));
+      safeSetItem(APPS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -596,7 +605,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteApplication = useCallback(async (id: string) => {
     setApplications(prev => {
       const next = prev.filter(a => a.id !== id);
-      AsyncStorage.setItem(APPS_KEY, JSON.stringify(next));
+      safeSetItem(APPS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -605,7 +614,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const contact: Contact = { ...data, id: genId(), addedDate: new Date().toISOString() };
     setContacts(prev => {
       const next = [contact, ...prev];
-      AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(next));
+      safeSetItem(CONTACTS_KEY, JSON.stringify(next));
       return next;
     });
     return contact;
@@ -614,7 +623,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateContact = useCallback(async (id: string, updates: Partial<Contact>) => {
     setContacts(prev => {
       const next = prev.map(c => c.id === id ? { ...c, ...updates } : c);
-      AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(next));
+      safeSetItem(CONTACTS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -622,7 +631,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteContact = useCallback(async (id: string) => {
     setContacts(prev => {
       const next = prev.filter(c => c.id !== id);
-      AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(next));
+      safeSetItem(CONTACTS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -632,7 +641,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSavedEvents(prev => {
       if (prev.some(e => e.id === event.id)) return prev;
       const next = [saved, ...prev];
-      AsyncStorage.setItem(SAVED_EVENTS_KEY, JSON.stringify(next));
+      safeSetItem(SAVED_EVENTS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -640,7 +649,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const unsaveEvent = useCallback(async (id: string) => {
     setSavedEvents(prev => {
       const next = prev.filter(e => e.id !== id);
-      AsyncStorage.setItem(SAVED_EVENTS_KEY, JSON.stringify(next));
+      safeSetItem(SAVED_EVENTS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -648,7 +657,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setAttendingEvent = useCallback(async (eventId: string, attending: boolean) => {
     setAttendingEventsState(prev => {
       const next = attending ? [...prev.filter(id => id !== eventId), eventId] : prev.filter(id => id !== eventId);
-      AsyncStorage.setItem(ATTENDING_EVENTS_KEY, JSON.stringify(next));
+      safeSetItem(ATTENDING_EVENTS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -656,7 +665,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setAttendedEvent = useCallback(async (eventId: string, attended: boolean) => {
     setAttendedEventsState(prev => {
       const next = attended ? [...prev.filter(id => id !== eventId), eventId] : prev.filter(id => id !== eventId);
-      AsyncStorage.setItem(ATTENDED_EVENTS_KEY, JSON.stringify(next));
+      safeSetItem(ATTENDED_EVENTS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -664,7 +673,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setEventNote = useCallback(async (eventId: string, note: string) => {
     setEventNotesState(prev => {
       const next = { ...prev, [eventId]: note };
-      AsyncStorage.setItem(EVENT_NOTES_KEY, JSON.stringify(next));
+      safeSetItem(EVENT_NOTES_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -673,7 +682,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const doc: StoredDocument = { ...data, id: genId(), uploadedAt: new Date().toISOString() };
     setDocs(prev => {
       const next = [doc, ...prev];
-      AsyncStorage.setItem(DOCS_KEY, JSON.stringify(next));
+      safeSetItem(DOCS_KEY, JSON.stringify(next));
       return next;
     });
     return doc;
@@ -682,7 +691,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateDoc = useCallback(async (id: string, updates: Partial<StoredDocument>) => {
     setDocs(prev => {
       const next = prev.map(d => d.id === id ? { ...d, ...updates } : d);
-      AsyncStorage.setItem(DOCS_KEY, JSON.stringify(next));
+      safeSetItem(DOCS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -690,14 +699,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteDoc = useCallback(async (id: string) => {
     setDocs(prev => {
       const next = prev.filter(d => d.id !== id);
-      AsyncStorage.setItem(DOCS_KEY, JSON.stringify(next));
+      safeSetItem(DOCS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
 
   const setThemeOverride = useCallback(async (t: ThemeOverride) => {
     setThemeOverrideState(t);
-    await AsyncStorage.setItem(THEME_KEY, t);
+    await safeSetItem(THEME_KEY, t);
   }, []);
 
   const addLetter = useCallback(async (data: Omit<SavedLetter, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -705,7 +714,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const letter: SavedLetter = { ...data, id: genId(), createdAt: now, updatedAt: now };
     setSavedLetters(prev => {
       const next = [letter, ...prev];
-      AsyncStorage.setItem(LETTERS_KEY, JSON.stringify(next));
+      safeSetItem(LETTERS_KEY, JSON.stringify(next));
       return next;
     });
     return letter;
@@ -714,7 +723,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateLetter = useCallback(async (id: string, updates: Partial<SavedLetter>) => {
     setSavedLetters(prev => {
       const next = prev.map(l => l.id === id ? { ...l, ...updates, updatedAt: new Date().toISOString() } : l);
-      AsyncStorage.setItem(LETTERS_KEY, JSON.stringify(next));
+      safeSetItem(LETTERS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -722,7 +731,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteLetter = useCallback(async (id: string) => {
     setSavedLetters(prev => {
       const next = prev.filter(l => l.id !== id);
-      AsyncStorage.setItem(LETTERS_KEY, JSON.stringify(next));
+      safeSetItem(LETTERS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -732,7 +741,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const session: InterviewSession = { ...data, id: genId(), startedAt: now };
     setInterviewSessions(prev => {
       const next = [session, ...prev];
-      AsyncStorage.setItem(INTERVIEWS_KEY, JSON.stringify(next));
+      safeSetItem(INTERVIEWS_KEY, JSON.stringify(next));
       return next;
     });
     return session;
@@ -741,7 +750,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateInterview = useCallback(async (id: string, updates: Partial<InterviewSession>) => {
     setInterviewSessions(prev => {
       const next = prev.map(s => s.id === id ? { ...s, ...updates } : s);
-      AsyncStorage.setItem(INTERVIEWS_KEY, JSON.stringify(next));
+      safeSetItem(INTERVIEWS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
@@ -749,24 +758,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteInterview = useCallback(async (id: string) => {
     setInterviewSessions(prev => {
       const next = prev.filter(s => s.id !== id);
-      AsyncStorage.setItem(INTERVIEWS_KEY, JSON.stringify(next));
+      safeSetItem(INTERVIEWS_KEY, JSON.stringify(next));
       return next;
     });
   }, []);
 
   const setSearchResults = useCallback(async (r: CompanySearchResult[]) => {
     setSearchResultsState(r);
-    await AsyncStorage.setItem(SEARCH_RESULTS_KEY, JSON.stringify(r));
+    // Cap at 20 results to stay well under storage quota
+    await safeSetItem(SEARCH_RESULTS_KEY, JSON.stringify(r.slice(0, 20)));
   }, []);
 
   const setRecentSearches = useCallback(async (r: RecentSearch[]) => {
     setRecentSearchesState(r);
-    await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(r));
+    await safeSetItem(RECENT_SEARCHES_KEY, JSON.stringify(r.slice(0, 10)));
   }, []);
 
   const setDiscoveredEvents = useCallback(async (e: DiscoveredEvent[]) => {
     setDiscoveredEventsState(e);
-    await AsyncStorage.setItem(DISCOVERED_EVENTS_KEY, JSON.stringify(e));
+    // Cap at 30 events to stay well under storage quota
+    await safeSetItem(DISCOVERED_EVENTS_KEY, JSON.stringify(e.slice(0, 30)));
   }, []);
 
   const clearAllData = useCallback(async () => {
