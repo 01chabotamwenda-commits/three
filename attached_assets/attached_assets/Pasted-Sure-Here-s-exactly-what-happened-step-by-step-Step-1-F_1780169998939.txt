@@ -1,0 +1,33 @@
+Sure! Here's exactly what happened step by step:
+
+Step 1 — Find companies mentioning "Mechatronics Engineer" in their professions
+I queried the zambian_companies table in your Supabase database with this filter:
+
+professions contains "Mechatronics Engineer"
+
+That returned 201 companies out of the 1,080 total. These are companies whose professions field explicitly lists "Mechatronics Engineer" as one of the roles they recruit for.
+
+Step 2 — Cut out the noise
+Of those 201, a big chunk were irrelevant for a mechatronics engineer — things like:
+
+District Commissioner's offices
+Police stations
+Post offices (ZAMPOST branches)
+Schools and hospitals (in many cases)
+These organisations appear in the database with a very generic professions list that happens to include mechatronics, but realistically they wouldn't be your target employer.
+
+So I filtered them out by checking the company name and sector against a skip-list of keywords like:
+
+"district commissioner", "zambia police", "zampost", "district hospital", "district council", "district education"
+
+Step 3 — Keep only engineering-relevant sectors
+After removing the noise, I kept only companies whose sector matched what a mechatronics engineer actually works in:
+
+Mining · Manufacturing · Energy · Telecoms/ICT · Engineering & Services · Utilities · Transport · Oil & Petroleum · Power · Electronics · Automotive · Industrial · Chemical · Construction · Tech
+
+That brought the list down to the 94 meaningful employers I showed you.
+
+Step 4 — Group by province and highlight the best ones
+I grouped the 94 by province so you could see where the opportunities are geographically. Then from experience with what mechatronics actually involves — automation, control systems, instrumentation, embedded electronics, robotics — I highlighted the 7 best-bet categories: ZESCO, mining houses, CEC, telecoms, chemical/process plants, mining equipment suppliers, and manufacturing.
+
+In short: the selection was based on what's in your own database — real companies that have explicitly said "we hire Mechatronics Engineers," filtered down to the ones that make genuine sense for your field.

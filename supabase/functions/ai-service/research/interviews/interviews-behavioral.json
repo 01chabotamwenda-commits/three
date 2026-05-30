@@ -1,0 +1,63 @@
+{
+  "category": "behavioral",
+  "description": "Common behavioral interview questions with strong STAR-format answers. Covers leadership, teamwork, conflict, failure, achievement, and adaptability.",
+  "count": 8,
+  "examples": [
+    {
+      "question": "Tell me about a time you demonstrated leadership when you were not the designated leader.",
+      "situation": "During my second year at UNZA, our five-person group was assigned a major research project on public health policy. Our appointed group leader was overwhelmed with personal issues and stopped attending meetings after the second week.",
+      "task": "I needed to ensure the project was completed on time and to a high standard, without creating conflict or undermining the official leader.",
+      "action": "I privately messaged the group leader to check on them and offered to help coordinate tasks while they handled their situation. I then created a shared task board, divided the remaining work based on each member's strengths, and scheduled short daily stand-up meetings to keep everyone aligned. I also took on the most complex section, data analysis, myself.",
+      "result": "We submitted the project two days early and received the highest mark in our class. My lecturer specifically praised the coherence and quality of our analysis. The group leader later thanked me for stepping up without making them feel replaced."
+    },
+    {
+      "question": "Describe a situation where you had to work with someone you did not get along with.",
+      "situation": "In a group assignment at CBU, I was paired with a classmate who had a very different working style. They preferred to work late at night and submit rough drafts, while I liked to start early and polish every section before moving on.",
+      "task": "We had to produce a 30-page technical report on renewable energy systems within three weeks, and our conflicting styles were causing tension and duplicated work.",
+      "action": "I suggested a compromise during our first meeting. We agreed to split the report into independent sections so each person could work in their preferred style. I also proposed a weekly checkpoint where we would review each other's sections and provide constructive feedback. I made a conscious effort to praise their strengths, their creativity and speed, while gently suggesting improvements in structure.",
+      "result": "We completed the report with no arguments, and it earned a distinction. More importantly, that classmate and I became friends and collaborated successfully on two more projects. I learned that different working styles are not obstacles, they are opportunities to cover more ground."
+    },
+    {
+      "question": "Tell me about a time you failed and what you learned from it.",
+      "situation": "During my industrial attachment at a retail company, I was asked to conduct a customer satisfaction survey and present the findings to management. I designed the survey myself and collected 200 responses.",
+      "task": "My goal was to identify key areas for improvement and make data-driven recommendations.",
+      "action": "I analysed the data quickly and presented a report highlighting three issues. However, during the presentation, the Operations Manager pointed out that I had not controlled for store location, rural customers had different expectations than urban ones. My recommendations were misleading because they treated all stores as a single population.",
+      "result": "The report was sent back for revision. I spent an extra week segmenting the data by location, age, and purchase frequency. The revised report revealed that what looked like a service quality issue was actually a product availability problem in rural stores. Management implemented targeted inventory changes that improved satisfaction scores by 18% in those locations. I learned that rushing analysis to meet a deadline can produce wrong conclusions, and that segmenting data is essential for accurate insights."
+    },
+    {
+      "question": "Give me an example of a time you had to adapt to a significant change.",
+      "situation": "In my third year, all my classes moved online due to a university closure. I had never taken an online course before and I struggled with self-discipline.",
+      "task": "I needed to maintain my academic performance while adjusting to a completely new learning environment, without the structure of physical classes and peer study groups.",
+      "action": "I created a daily schedule that mimicked my campus routine, with specific time blocks for each subject. I also formed a virtual study group with four classmates via WhatsApp, where we shared notes, asked questions, and held weekly video review sessions. I additionally reached out to lecturers during their virtual office hours, something I had never done before.",
+      "result": "I finished the semester with a GPA of 3.8, higher than my previous semester. The virtual study group became a lasting support network, and the discipline I developed during that period has made me more productive in every area of my life since then."
+    },
+    {
+      "question": "Tell me about a time you went above and beyond what was expected.",
+      "situation": "During my attachment at a small accounting firm, my supervisor asked me to compile monthly expense reports for five clients. The task was straightforward, spreadsheet work.",
+      "task": "I could have simply compiled the numbers and submitted the reports. Instead, I saw an opportunity to add value.",
+      "action": "While compiling the reports, I noticed that three clients had consistent overspending in the same category, office supplies. I researched average costs for comparable businesses and created a simple benchmarking comparison. I also prepared a one-page recommendation with three cost-saving strategies: bulk purchasing, supplier negotiation, and digital record-keeping to reduce printing costs.",
+      "result": "My supervisor was so impressed that they presented my analysis directly to the clients. Two of the three clients implemented my recommendations and reported savings of approximately ZMW 4,000 per quarter. My supervisor gave me a strong recommendation letter and offered me a part-time position for the following semester."
+    },
+    {
+      "question": "Describe a time when you had to make a difficult decision with limited information.",
+      "situation": "As the Social Media Coordinator for the Student Association, I had to decide whether to cancel a planned outdoor career fair one day before the event, because weather forecasts predicted heavy rain.",
+      "task": "I had to weigh the financial cost of cancellation against the safety and experience of attendees. The venue deposit was non-refundable, and 200 students had registered.",
+      "action": "I called the venue to ask about covered areas and rain contingencies. They confirmed that only 30% of the space was under shelter. I then sent a quick poll to registered attendees asking if they would still attend in the rain, and 60% said no. Based on this data, I made the decision to cancel, but I immediately arranged a virtual alternative, a live-streamed panel discussion with the same employers, plus a WhatsApp group for Q&A.",
+      "result": "The virtual event had 180 participants, and several employers said the format was actually more efficient than in-person because they could share slides and links. The Student Association adopted the hybrid model for future events. I learned that good decision-making is not about having perfect information, it is about gathering what you can, acting decisively, and having a backup plan."
+    },
+    {
+      "question": "Tell me about a time you had to persuade someone to see things your way.",
+      "situation": "In my final year project group, I proposed using Python for data analysis, but the majority wanted to use Excel because they were more familiar with it. Excel would have been too slow for our dataset of 50,000 records.",
+      "task": "I needed to convince my group to learn and use Python without making them feel incompetent or dismissing their concerns about the learning curve.",
+      "action": "Instead of arguing, I spent one evening creating a side-by-side comparison. I performed the same analysis task, data cleaning and correlation calculation, in both Excel and Python, and timed each one. Excel took 45 minutes with multiple crashes, Python took 3 minutes. I also prepared a simple Python script with comments explaining every line, specifically designed for beginners. I offered to run a 30-minute tutorial for the group before we started the actual project.",
+      "result": "The group agreed to try Python. After the tutorial, two members said they actually preferred it to Excel for large datasets. We completed the analysis phase in half the expected time, and the project earned a distinction. I learned that persuasion works best when you address people's real concerns with evidence and offer to make the transition easy for them."
+    },
+    {
+      "question": "Describe a time when you received negative feedback and how you handled it.",
+      "situation": "During my attachment at a marketing agency, I presented a social media campaign proposal to the Creative Director. She rejected it immediately, saying it was too generic and did not reflect the client's brand voice.",
+      "task": "I needed to process the feedback constructively, understand what was wrong, and produce a much better proposal within 48 hours.",
+      "action": "I asked the Creative Director for a 10-minute meeting to understand her specific concerns. She explained that I had used stock phrases and trendy templates without researching the client's actual audience. I spent the next three hours studying the client's past campaigns, reading customer reviews, and analysing competitor content. I then rewrote the proposal from scratch, incorporating real customer language and addressing pain points I had identified. I also showed the draft to a senior colleague for feedback before submitting.",
+      "result": "The revised proposal was approved with only minor tweaks. The client later sent a thank-you note saying it was the most thoughtful campaign pitch they had received. The Creative Director told my supervisor that I had shown 'exceptional coachability.' That experience taught me that the best response to criticism is curiosity, not defensiveness."
+    }
+  ]
+}

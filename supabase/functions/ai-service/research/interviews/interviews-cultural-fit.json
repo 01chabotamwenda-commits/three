@@ -1,0 +1,39 @@
+{
+  "category": "cultural-fit",
+  "description": "Questions that assess alignment with company values, work style, motivation, and long-term fit.",
+  "count": 8,
+  "examples": [
+    {
+      "question": "What motivates you to come to work every day?",
+      "expectedAnswer": "I am motivated by a combination of challenge, impact, and growth. I need to feel that my work matters, that it contributes to something larger than myself. During my campus business, I worked late nights not because I had to, but because I knew that every sale meant a customer got something they needed, and every improvement meant the business became more sustainable. I am also motivated by learning, when I am in an environment where I am constantly challenged to improve, I thrive. Conversely, when I feel stagnant, my energy drops. Finally, I am motivated by relationships. I work best in teams where people respect each other, communicate openly, and celebrate wins together. A toxic environment drains my motivation regardless of how interesting the work is."
+    },
+    {
+      "question": "How do you handle stress and pressure?",
+      "expectedAnswer": "I handle stress through a combination of organisation, perspective, and self-care. Organisation means breaking large stressful tasks into small, manageable pieces and creating a schedule. Perspective means reminding myself that most stressful situations are temporary and that I have overcome challenges before. Self-care means maintaining sleep, exercise, and social connection even during busy periods, because neglecting those makes stress worse. During exam periods, I have managed heavy workloads by studying in focused 90-minute blocks with breaks, exercising in the morning, and talking to friends regularly. In professional settings, when a deadline is tight, I communicate early about constraints, focus on the highest-impact tasks, and delegate where possible. I also know when to ask for help, trying to appear invincible under stress is a fast path to burnout."
+    },
+    {
+      "question": "What kind of work environment do you thrive in?",
+      "expectedAnswer": "I thrive in environments that balance structure with autonomy. I need clear goals and expectations so I know what success looks like, but I also need the freedom to choose how I achieve those goals. Micromanagement frustrates me, but complete ambiguity paralyses me. I also thrive in collaborative environments where colleagues share knowledge freely and challenge each other respectfully. I have learned the most from teammates who were willing to explain their reasoning and listen to mine. I value feedback, both positive and constructive, because it helps me improve. Finally, I appreciate environments that celebrate progress, not just final outcomes. When a team acknowledges small wins along the way, morale stays high even during long projects."
+    },
+    {
+      "question": "Where do you see yourself in five years?",
+      "expectedAnswer": "In five years, I see myself as a skilled professional who has moved from learning to contributing to leading. I want to develop deep expertise in my field, whether that is financial analysis, software engineering, or marketing strategy. I want to have built a track record of delivering results that I can point to with confidence. I also want to be in a position where I am mentoring newer team members, because I believe teaching is one of the best ways to solidify your own knowledge. Ultimately, I want to be someone my organisation trusts with important responsibilities, someone who can be relied upon when the stakes are high. I am open to different paths to get there, whether through a specialist track or a management track, but my priority is growth, impact, and integrity."
+    },
+    {
+      "question": "What are your strengths and weaknesses?",
+      "expectedAnswer": "My greatest strength is persistence. When I commit to a goal, I do not give up easily. I have overcome academic setbacks, financial constraints, and personal challenges to get where I am, and that resilience serves me in professional settings too. Another strength is my ability to learn quickly. I can absorb new concepts, tools, and systems faster than many peers, which makes me adaptable. My weakness is that I sometimes take on too much. I get excited about opportunities and say yes before fully assessing my capacity. I have learned to manage this by maintaining a personal task board and being honest with myself about what I can realistically deliver. When I am at capacity, I now say, 'I am fully committed until [date], but I would love to help after that,' rather than overpromising."
+    },
+    {
+      "question": "How do you define success in your career?",
+      "expectedAnswer": "I define success as a combination of competence, contribution, and character. Competence means being excellent at what I do, continuously improving, and being recognised by peers and superiors as someone who delivers quality work. Contribution means making a positive impact, whether that is helping a company grow, improving a process, mentoring a colleague, or serving a community. Character means maintaining integrity, treating people with respect, and making decisions I can be proud of years later. Financial reward and titles matter to me, but only as byproducts of genuine success, not as goals in themselves. If I am highly paid but doing work that harms people or compromises my values, that is not success. My ultimate measure of career success is whether, at the end of my career, I can look back and say I made things better for the people and organisations I served."
+    },
+    {
+      "question": "Why did you choose your field of study?",
+      "expectedAnswer": "I chose [field] because it combines [two things the person values]. For example, I chose computer science because it combines logical problem-solving with creative expression. Writing code is like solving a puzzle, but the solution is something tangible that people can use. In my first programming class, I built a simple calculator, and I remember the excitement of seeing something I created actually work. That feeling has driven me ever since. I also chose this field because of its impact. Technology shapes every aspect of modern life, from healthcare to education to business, and I want to be part of shaping that impact positively. The job market is strong, which is practical, but it is not the primary reason. I would have studied this even if the jobs were scarce, because I genuinely enjoy the work."
+    },
+    {
+      "question": "What do you do for fun outside of work?",
+      "expectedAnswer": "I believe in maintaining a balanced life. Outside of work, I enjoy [specific hobbies, for example: playing football with a local team, which keeps me fit and teaches me teamwork; reading, currently I am reading a book on Zambian history, which helps me understand the context of the society I live in; and volunteering at a community centre where I tutor primary school children in mathematics. I find that my hobbies actually improve my professional performance. Football teaches me discipline and teamwork. Reading broadens my perspective and improves my communication. Volunteering reminds me that my skills can make a difference in people's lives, which keeps me motivated. I also value time with family and friends, because relationships are the foundation of a fulfilling life. I am not someone who works 24/7, and I do not think that is sustainable or desirable."
+    }
+  ]
+}

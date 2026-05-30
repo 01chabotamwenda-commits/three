@@ -1,0 +1,39 @@
+{
+  "category": "company-specific",
+  "description": "Questions tailored to specific types of companies and industries. Helps the AI generate context-aware interview prep for any company the user researches.",
+  "count": 8,
+  "examples": [
+    {
+      "question": "What do you know about Zamtel and why do you want to work here?",
+      "expectedAnswer": "Zamtel is Zambia's state-owned telecommunications company, providing mobile, fixed-line, and internet services across the country. It is the oldest telecom operator in Zambia and has recently invested in 4G network expansion and fibre infrastructure. I want to work at Zamtel because of its national infrastructure role, connecting even remote communities to communication services. I am particularly interested in the company's rural connectivity initiatives and the opportunity to work on projects that have direct social impact. Additionally, as a government-linked entity, Zamtel offers job stability and professional development pathways that align with my long-term career goals in the telecom sector."
+    },
+    {
+      "question": "How would you contribute to MTN's digital transformation strategy?",
+      "expectedAnswer": "MTN Zambia is aggressively expanding its digital services, including mobile money through MoMo, digital content platforms, and fintech partnerships. I would contribute by bringing fresh technical skills and a user-centred perspective. In my studies, I developed a mobile app that processed financial transactions, which gave me insight into user experience challenges in fintech. I would focus on improving the onboarding experience for new MoMo users, because research shows that complex onboarding is a major barrier to digital adoption in Zambia. I would also advocate for data-driven decision making, using analytics to identify which services users engage with most and prioritising improvements there."
+    },
+    {
+      "question": "What challenges do you think Zesco faces in providing reliable electricity, and how would you help address them?",
+      "expectedAnswer": "Zesco faces several significant challenges. First, ageing infrastructure, many generation and transmission assets are decades old and require maintenance or replacement. Second, hydrological dependency, over 80% of generation is hydro-based, making the system vulnerable to climate variability and drought. Third, transmission losses and theft, technical and non-technical losses reduce revenue and system efficiency. Fourth, demand growth outpacing supply, particularly from the mining sector. I would help address these by contributing to grid modernisation projects, supporting the integration of solar and wind generation to diversify the energy mix, and working on smart metering initiatives that reduce losses and improve revenue collection. My background in power systems and renewable energy positions me to contribute meaningfully to these priorities."
+    },
+    {
+      "question": "Why Standard Chartered Bank and not another bank?",
+      "expectedAnswer": "Standard Chartered stands out for several reasons. First, its global network spans 59 markets, which means exposure to international banking practices and potential for cross-border career mobility. Second, its focus on sustainable finance and ESG investing aligns with my personal values, I want my career to contribute positively to society, not just generate profit. Third, the bank's digital banking investments in Africa, including AI-powered customer service and mobile-first platforms, represent the cutting edge of financial technology. I want to learn from an institution that is shaping the future of banking, not just maintaining the status quo. Finally, Standard Chartered's graduate programme has a reputation for structured mentorship and early responsibility, which is exactly the environment I need to accelerate my professional growth."
+    },
+    {
+      "question": "How do you see yourself fitting into BongoHive's startup culture?",
+      "expectedAnswer": "BongoHive's culture is built on innovation, collaboration, and social impact. I see myself fitting in because I share those values. I am comfortable with ambiguity and rapid iteration, which are essential in startup environments where priorities shift quickly based on market feedback. I am also a self-starter, during a student project I identified a feature gap in our prototype and built it over a weekend without being asked. At the same time, I value collaboration, I believe the best solutions come from diverse perspectives, and I enjoy brainstorming and pair programming. BongoHive's focus on Zambian entrepreneurship resonates with me because I have seen firsthand how technology can transform small businesses. I am excited about the prospect of working on products that solve real problems for real people."
+    },
+    {
+      "question": "What do you think makes Airtel competitive against MTN in the Zambian market?",
+      "expectedAnswer": "Airtel's competitive position rests on several pillars. First, aggressive pricing, Airtel has historically positioned itself as the value option, offering lower tariffs and bundled data packages that appeal to price-sensitive consumers. Second, network quality investment, particularly in urban areas where data usage is highest. Third, the Airtel Money platform, which has grown significantly and competes directly with MTN MoMo. Fourth, customer service innovation, including AI chatbots and simplified USSD menus. I believe Airtel's opportunity lies in deepening rural coverage while maintaining urban competitiveness, and in expanding financial services beyond basic mobile money into lending and insurance. As a young professional, I am drawn to Airtel because it is the challenger brand, and challenger brands require creativity, agility, and hustle, qualities I want to develop."
+    },
+    {
+      "question": "How would you support the government's public health goals if you joined the Ministry of Health?",
+      "expectedAnswer": "The Ministry of Health's strategic priorities include reducing maternal and child mortality, controlling infectious diseases like malaria and HIV/AIDS, and strengthening primary health care. I would support these goals by contributing my skills in whatever area I am assigned. If I am in the planning department, I would work on data collection and analysis to inform resource allocation decisions. If I am in the programme management unit, I would help coordinate with NGOs and international partners to ensure programmes are delivered effectively. I would also advocate for technology adoption, for example, using mobile health platforms to improve disease surveillance and patient follow-up. My commitment is to serve with integrity, follow established procedures, and always keep the beneficiary, the Zambian citizen, at the centre of every decision."
+    },
+    {
+      "question": "What interests you about working in the mining sector, specifically at Mopani or KCM?",
+      "expectedAnswer": "The mining sector is the backbone of Zambia's economy, contributing over 70% of export earnings. Working at a major copper producer like Mopani or KCM means contributing to national economic stability while developing highly specialised technical skills. I am particularly interested in the industry's current transformation, the global energy transition is driving unprecedented demand for copper, and Zambia is positioned to be a major beneficiary. At the same time, the industry faces pressure to improve environmental performance and community relations. I want to be part of that evolution, helping the company operate profitably while reducing its environmental footprint and creating lasting benefits for host communities. The technical complexity of mining operations, from geology and metallurgy to logistics and safety management, offers a depth of learning that few other industries can match."
+    }
+  ]
+}

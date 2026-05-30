@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "description": "Curated corpus of cover letters and interview examples for Career Campus AI training",
+  "letterFiles": [
+    "letters-formal-professional.json",
+    "letters-warm-personal.json",
+    "letters-confident-assertive.json",
+    "letters-humble-earnest.json",
+    "letters-detailed-technical.json",
+    "letters-concise-direct.json",
+    "letters-creative-narrative.json",
+    "letters-internship-specific.json",
+    "letters-attachment-specific.json",
+    "letters-graduate-programme.json"
+  ],
+  "interviewFiles": [
+    "interviews-behavioral.json",
+    "interviews-technical-software.json",
+    "interviews-technical-engineering.json",
+    "interviews-technical-finance.json",
+    "interviews-company-specific.json",
+    "interviews-role-specific.json",
+    "interviews-situational.json",
+    "interviews-cultural-fit.json"
+  ],
+  "styleAnalysisFile": "style-analysis/letter-writing-guide.md",
+  "usageNotes": "The AI reads these files via the ai-service edge function to provide few-shot examples when drafting letters or preparing interview questions. Style examples are injected into the prompt via the styleExamples field."
+}

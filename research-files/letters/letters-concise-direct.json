@@ -1,0 +1,18 @@
+{
+  "styleLabel": "concise-direct",
+  "description": "Short, no fluff, gets straight to the point. Best for high-volume recruiters who skim applications.",
+  "examples": [
+    {
+      "title": "Concise Application for Graduate Programme",
+      "body": "25 March 2026\n\nDear Recruitment Team,\n\nI am a first-class BSc Accounting graduate from UNZA with a GPA of 3.8, applying for your Graduate Programme.\n\nKey strengths:\n- Advanced Excel and financial modelling\n- Completed industrial attachment at a Big Four firm\n- President of the Accounting Society (2024-2025)\n- Fluent in English, Nyanja, and Bemba\n\nI am available immediately and eager to contribute to your audit team.\n\nYours sincerely,\n\nMartin Ngoma"
+    },
+    {
+      "title": "Direct Cover Letter for WIL Placement",
+      "body": "12 June 2026\n\nDear Sir/Madam,\n\nI am a third-year Computer Engineering student at CBU seeking a six-month WIL placement in network engineering.\n\nRelevant skills:\n- Cisco CCNA certified\n- Network simulation using Packet Tracer and GNS3\n- Linux server administration\n- Python scripting for network automation\n\nI completed a successful attachment at a local ISP last year, where I assisted in network monitoring and troubleshooting.\n\nI am available from July 2026.\n\nYours faithfully,\n\nBrian Mfula"
+    },
+    {
+      "title": "Direct Application for Marketing Internship",
+      "body": "8 August 2026\n\nHello Team,\n\nI am applying for the Marketing Intern position. Here is why I am a strong candidate:\n\n- Final-year Marketing student at Mulungushi University\n- Managed social media for two student organisations, growing followership by 250%\n- Created a digital marketing campaign for a campus event that sold 500 tickets\n- Proficient in Canva, Meta Business Suite, and Google Analytics\n\nI am passionate about brand storytelling and data-driven marketing. I am ready to contribute from day one.\n\nBest regards,\n\nNatasha Liywali"
+    }
+  ]
+}
